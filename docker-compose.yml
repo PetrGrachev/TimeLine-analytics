@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  postgres_main:
+    image: postgres:15
+    container_name: postgres_main
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: main_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_main:/var/lib/postgresql/data
+      - ./main_db:/docker-entrypoint-initdb.d
+    command: [ "postgres", "-c", "fsync=off" ]
+
+  postgres_analytics:
+    image: postgres:15
+    container_name: postgres_analytics
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: analytics_db
+    ports:
+      - "5433:5432"  # На хосте аналитическая база доступна на порту 5433
+    volumes:
+      - pgdata_analytics:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: [ "postgres", "-c", "fsync=off" ]
+
+  flask_app:
+    build: .
+    container_name: flask_app
+    restart: always
+    depends_on:
+      - postgres_main
+      - postgres_analytics
+    environment:
+      # Параметры для основной БД
+      MAIN_DB_NAME: main_db
+      MAIN_DB_USER: postgres
+      MAIN_DB_PASSWORD: secret
+      MAIN_DB_HOST: postgres_main
+      MAIN_DB_PORT: 5432
+      # Параметры для аналитической БД
+      ANALYTICS_DB_NAME: analytics_db
+      ANALYTICS_DB_USER: postgres
+      ANALYTICS_DB_PASSWORD: secret
+      ANALYTICS_DB_HOST: postgres_analytics
+      ANALYTICS_DB_PORT: 5432
+    ports:
+      - "5000:5000"
+
+volumes:
+  pgdata_main:
+  pgdata_analytics:
