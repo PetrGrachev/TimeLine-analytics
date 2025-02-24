@@ -35,7 +35,7 @@ def get_aggregated_data():
         conn = get_db_connection(ANALYTICS_DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service
+            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating
             FROM booking_stats
             WHERE org_id = %s
             ORDER BY period_end DESC
@@ -52,7 +52,10 @@ def get_aggregated_data():
             "total_revenue": row[3],
             "avg_booking_cost": row[4],
             "unique_customers": row[5],
-            "popular_service": row[6]
+            "popular_service": row[6],
+            "most_frequent_client_id": row[7],
+            "best_worker_id": row[8],
+            "best_worker_rating": row[9]
         }
         return jsonify(response)
     except Exception as e:
@@ -75,6 +78,28 @@ def load_data():
                 GROUP BY r.org_id, s.name
                 ORDER BY r.org_id, COUNT(*) DESC
             ),
+            most_frequent_client as (
+                SELECT DISTINCT ON (org_id)
+                org_id,
+                user_id
+                FROM records
+                GROUP BY org_id, user_id
+                ORDER BY org_id, COUNT(*) DESC
+            ),
+            
+            best_workers AS (
+            SELECT DISTINCT ON (w.org_id)
+            w.org_id,
+            w.worker_id,
+            AVG(f.stars) AS avg_rating
+            FROM workers w
+            JOIN records r ON w.worker_id = r.worker_id
+            JOIN feedbacks f ON r.record_id = f.record_id
+            WHERE r.reviewed = TRUE
+            GROUP BY w.org_id, w.worker_id
+            ORDER BY w.org_id, avg_rating DESC 
+            ),
+                            
             booking_stats AS (             
             SELECT r.org_id,
                    COUNT(*) AS total_bookings,
@@ -91,9 +116,14 @@ def load_data():
                    bs.total_revenue,
                    bs.avg_booking_cost,
                    bs.unique_customers,
-                   mps.service_name AS popular_service
+                   mps.service_name AS popular_service,
+                   mfc.user_id AS most_frequent_client_id,
+                   bw.worker_id AS best_worker_id,
+                   bw.avg_rating AS best_worker_rating
             FROM booking_stats bs
-            LEFT JOIN most_popular_service mps ON bs.org_id = mps.org_id;
+            LEFT JOIN most_popular_service mps ON bs.org_id = mps.org_id
+            LEFT JOIN most_frequent_client mfc ON mfc.org_id = bs.org_id
+            LEFT JOIN best_workers bw ON bw.org_id = bs.org_id;
         """)
         data = cursor_main.fetchall()
         conn_main.close()
@@ -103,14 +133,17 @@ def load_data():
         cursor_analytics = conn_analytics.cursor()
         for row in data:
             cursor_analytics.execute("""
-                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service)
-                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s)
+                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating)
+                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (org_id, period_end) DO UPDATE 
                 SET total_bookings = EXCLUDED.total_bookings,
                     total_revenue = EXCLUDED.total_revenue,
                     avg_booking_cost = EXCLUDED.avg_booking_cost,
                     unique_customers = EXCLUDED.unique_customers,
-                    popular_service = EXCLUDED.popular_service;
+                    popular_service = EXCLUDED.popular_service,
+                    most_frequent_client_id = EXCLUDED.most_frequent_client_id,
+                    best_worker_id = EXCLUDED.best_worker_id,
+                    best_worker_rating = EXCLUDED.best_worker_rating;
             """, row)
         conn_analytics.commit()
         conn_analytics.close()
