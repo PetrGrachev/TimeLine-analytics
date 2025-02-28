@@ -35,7 +35,7 @@ def get_aggregated_data():
         conn = get_db_connection(ANALYTICS_DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating
+            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating
             FROM booking_stats
             WHERE org_id = %s
             ORDER BY period_end DESC
@@ -54,10 +54,45 @@ def get_aggregated_data():
             "unique_customers": row[5],
             "popular_service": row[6],
             "most_frequent_client_id": row[7],
-            "best_worker_id": row[8],
-            "best_worker_rating": row[9]
+            "best_worker": {
+                "worker_id": row[8],
+                "rating": row[9]
+            },
+            "worst_worker": {
+                "worker_id": row[10],
+                "rating": row[11]
+            }
         }
         return jsonify(response)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/analytics/distribution', methods=['GET'])
+def get_booking_distribution():
+    org_id = request.args.get("org_id")
+    if not org_id:
+        return jsonify({"error": "org_id is required"}), 400
+    try:
+        conn = get_db_connection(ANALYTICS_DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT day_of_week, hour, total_bookings
+            FROM booking_distribution
+            WHERE org_id = %s
+            ORDER BY day_of_week, hour;
+        """, (org_id,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        distribution = []
+        for row in rows:
+            distribution.append({
+                "day_of_week": int(row[0]),
+                "hour": int(row[1]),
+                "total_bookings": row[2]
+            })
+
+        return jsonify({"distribution": distribution}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -78,6 +113,7 @@ def load_data():
                 GROUP BY r.org_id, s.name
                 ORDER BY r.org_id, COUNT(*) DESC
             ),
+                            
             most_frequent_client as (
                 SELECT DISTINCT ON (org_id)
                 org_id,
@@ -87,17 +123,30 @@ def load_data():
                 ORDER BY org_id, COUNT(*) DESC
             ),
             
+                            
+            worker_ratings AS (
+                SELECT 
+                    w.org_id,
+                    w.worker_id,
+                    AVG(f.stars) AS avg_rating,
+                    RANK() OVER (PARTITION BY w.org_id ORDER BY AVG(f.stars) DESC) AS best_rank,
+                    RANK() OVER (PARTITION BY w.org_id ORDER BY AVG(f.stars) ASC) AS worst_rank
+                FROM workers w
+                JOIN records r ON w.worker_id = r.worker_id
+                JOIN feedbacks f ON r.record_id = f.record_id
+                WHERE r.reviewed = TRUE
+                GROUP BY w.org_id, w.worker_id
+            ),
+                            
             best_workers AS (
-            SELECT DISTINCT ON (w.org_id)
-            w.org_id,
-            w.worker_id,
-            AVG(f.stars) AS avg_rating
-            FROM workers w
-            JOIN records r ON w.worker_id = r.worker_id
-            JOIN feedbacks f ON r.record_id = f.record_id
-            WHERE r.reviewed = TRUE
-            GROUP BY w.org_id, w.worker_id
-            ORDER BY w.org_id, avg_rating DESC 
+                SELECT
+                    org_id,
+                    MAX(CASE WHEN best_rank = 1 THEN worker_id END) AS best_worker_id,
+                    MAX(CASE WHEN best_rank = 1 THEN avg_rating END) AS best_worker_rating,
+                    MAX(CASE WHEN worst_rank = 1 THEN worker_id END) AS worst_worker_id,
+                    MAX(CASE WHEN worst_rank = 1 THEN avg_rating END) AS worst_worker_rating
+                FROM worker_ratings
+                GROUP BY org_id
             ),
                             
             booking_stats AS (             
@@ -118,8 +167,10 @@ def load_data():
                    bs.unique_customers,
                    mps.service_name AS popular_service,
                    mfc.user_id AS most_frequent_client_id,
-                   bw.worker_id AS best_worker_id,
-                   bw.avg_rating AS best_worker_rating
+                   bw.best_worker_id AS best_worker_id,
+                   bw.best_worker_rating AS best_worker_rating,
+                   bw.worst_worker_id AS worst_worker_id,
+                   bw.worst_worker_rating AS worst_worker_rating
             FROM booking_stats bs
             LEFT JOIN most_popular_service mps ON bs.org_id = mps.org_id
             LEFT JOIN most_frequent_client mfc ON mfc.org_id = bs.org_id
@@ -133,8 +184,8 @@ def load_data():
         cursor_analytics = conn_analytics.cursor()
         for row in data:
             cursor_analytics.execute("""
-                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating)
-                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating)
+                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (org_id, period_end) DO UPDATE 
                 SET total_bookings = EXCLUDED.total_bookings,
                     total_revenue = EXCLUDED.total_revenue,
@@ -143,13 +194,66 @@ def load_data():
                     popular_service = EXCLUDED.popular_service,
                     most_frequent_client_id = EXCLUDED.most_frequent_client_id,
                     best_worker_id = EXCLUDED.best_worker_id,
-                    best_worker_rating = EXCLUDED.best_worker_rating;
+                    best_worker_rating = EXCLUDED.best_worker_rating,
+                    worst_worker_id = EXCLUDED.worst_worker_id,
+                    worst_worker_rating = EXCLUDED.worst_worker_rating;          
             """, row)
         conn_analytics.commit()
         conn_analytics.close()
+
+        load_booking_distribution()
+
         return jsonify({"status": "Data loaded successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+def load_booking_distribution():
+    """
+    Функция загружает данные распределения бронирований по дню недели и часу
+    из основной БД и вставляет их в таблицу booking_distribution аналитической БД.
+    """
+    try:
+        conn_main = get_db_connection(MAIN_DB_CONFIG)
+        cursor_main = conn_main.cursor()
+        cursor_main.execute("""
+            SELECT 
+                r.org_id,
+                EXTRACT(DOW FROM s.session_begin) AS day_of_week,
+                EXTRACT(HOUR FROM s.session_begin) AS hour,
+                COUNT(*) AS total_bookings
+            FROM records r
+            JOIN slots s ON r.slot_id = s.slot_id
+            GROUP BY 
+                r.org_id, 
+                EXTRACT(DOW FROM s.session_begin), 
+                EXTRACT(HOUR FROM s.session_begin)
+            ORDER BY 
+                r.org_id, day_of_week, hour;
+        """)
+        distribution_data = cursor_main.fetchall()
+        conn_main.close()
+
+        conn_analytics = get_db_connection(ANALYTICS_DB_CONFIG)
+        cursor_analytics = conn_analytics.cursor()
+        for row in distribution_data:
+            org_id, day_of_week, hour, total_bookings = row
+            cursor_analytics.execute("""
+                INSERT INTO booking_distribution (
+                    org_id, day_of_week, hour, total_bookings, period_start, period_end
+                )
+                VALUES (
+                    %s, %s, %s, %s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE
+                )
+                ON CONFLICT (org_id, day_of_week, hour, period_start, period_end) DO UPDATE
+                SET total_bookings = EXCLUDED.total_bookings;
+            """, (org_id, day_of_week, hour, total_bookings))
+        conn_analytics.commit()
+        conn_analytics.close()
+        print("Booking distribution data loaded successfully.")
+    except Exception as e:
+        print("Error loading booking distribution: " + str(e))
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

@@ -10,5 +10,22 @@ CREATE TABLE IF NOT EXISTS booking_stats (
     most_frequent_client_id INT NOT NULL,
     best_worker_id INT,
     best_worker_rating NUMERIC(15, 2),
+    worst_worker_id INT,
+    worst_worker_rating NUMERIC(15, 2),
     PRIMARY KEY (org_id, period_end)
+);
+CREATE TABLE IF NOT EXISTS booking_distribution (
+    org_id INT,
+    day_of_week INT,
+    hour INT,
+    total_bookings INT,
+    period_start DATE,
+    period_end DATE,
+    PRIMARY KEY (
+        org_id,
+        day_of_week,
+        hour,
+        period_start,
+        period_end
+    )
 );
