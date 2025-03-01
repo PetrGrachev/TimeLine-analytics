@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS booking_stats (
     best_worker_rating NUMERIC(15, 2),
     worst_worker_id INT,
     worst_worker_rating NUMERIC(15, 2),
+    best_service_id INT,
+    best_service_rating NUMERIC(15, 2),
+    worst_service_id INT,
+    worst_service_rating NUMERIC(15, 2),
     PRIMARY KEY (org_id, period_end)
 );
 CREATE TABLE IF NOT EXISTS booking_distribution (

@@ -35,7 +35,7 @@ def get_aggregated_data():
         conn = get_db_connection(ANALYTICS_DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating
+            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating
             FROM booking_stats
             WHERE org_id = %s
             ORDER BY period_end DESC
@@ -61,6 +61,14 @@ def get_aggregated_data():
             "worst_worker": {
                 "worker_id": row[10],
                 "rating": row[11]
+            },
+            "best_service": {
+                "service_id": row[12],
+                "rating": row[13]
+            },
+            "worst_service": {
+                "service_id": row[14],
+                "rating": row[15]
             }
         }
         return jsonify(response)
@@ -149,6 +157,33 @@ def load_data():
                 GROUP BY org_id
             ),
                             
+            service_ratings AS (
+                SELECT 
+                    s.org_id,
+                    s.service_id,
+                    AVG(f.stars) AS avg_rating,
+                    RANK() OVER (PARTITION BY s.org_id ORDER BY AVG(f.stars) DESC) AS best_rank,
+                    RANK() OVER (PARTITION BY s.org_id ORDER BY AVG(f.stars) ASC) AS worst_rank
+                FROM services s
+                JOIN records r ON s.service_id = r.service_id
+                JOIN feedbacks f ON r.record_id = f.record_id
+                WHERE r.reviewed = TRUE
+                GROUP BY s.org_id, s.service_id
+            ),
+                            
+            best_services AS (
+                SELECT
+                    org_id,
+                    MAX(CASE WHEN best_rank = 1 THEN service_id END) AS best_service_id,
+                    MAX(CASE WHEN best_rank = 1 THEN avg_rating END) AS best_service_rating,
+                    MAX(CASE WHEN worst_rank = 1 THEN service_id END) AS worst_service_id,
+                    MAX(CASE WHEN worst_rank = 1 THEN avg_rating END) AS worst_service_rating
+                FROM service_ratings
+                GROUP BY org_id
+            ),
+                            
+            
+                            
             booking_stats AS (             
             SELECT r.org_id,
                    COUNT(*) AS total_bookings,
@@ -170,11 +205,16 @@ def load_data():
                    bw.best_worker_id AS best_worker_id,
                    bw.best_worker_rating AS best_worker_rating,
                    bw.worst_worker_id AS worst_worker_id,
-                   bw.worst_worker_rating AS worst_worker_rating
+                   bw.worst_worker_rating AS worst_worker_rating,
+                   bse.best_service_id AS best_service_id,
+                   bse.best_service_rating AS best_service_rating,
+                   bse.worst_service_id AS worst_service_id,
+                   bse.worst_service_rating AS worst_service_rating
             FROM booking_stats bs
             LEFT JOIN most_popular_service mps ON bs.org_id = mps.org_id
             LEFT JOIN most_frequent_client mfc ON mfc.org_id = bs.org_id
-            LEFT JOIN best_workers bw ON bw.org_id = bs.org_id;
+            LEFT JOIN best_workers bw ON bw.org_id = bs.org_id
+            LEFT JOIN best_services bse ON bse.org_id = bs.org_id;
         """)
         data = cursor_main.fetchall()
         conn_main.close()
@@ -184,8 +224,8 @@ def load_data():
         cursor_analytics = conn_analytics.cursor()
         for row in data:
             cursor_analytics.execute("""
-                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating)
-                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating)
+                VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (org_id, period_end) DO UPDATE 
                 SET total_bookings = EXCLUDED.total_bookings,
                     total_revenue = EXCLUDED.total_revenue,
@@ -196,7 +236,11 @@ def load_data():
                     best_worker_id = EXCLUDED.best_worker_id,
                     best_worker_rating = EXCLUDED.best_worker_rating,
                     worst_worker_id = EXCLUDED.worst_worker_id,
-                    worst_worker_rating = EXCLUDED.worst_worker_rating;          
+                    worst_worker_rating = EXCLUDED.worst_worker_rating,
+                    best_service_id = EXCLUDED.best_service_id,
+                    best_service_rating = EXCLUDED.best_service_rating,
+                    worst_service_id = EXCLUDED.worst_service_id,
+                    worst_service_rating = EXCLUDED.worst_service_rating;          
             """, row)
         conn_analytics.commit()
         conn_analytics.close()
