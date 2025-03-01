@@ -48,28 +48,36 @@ def get_aggregated_data():
         response = {
             "period_start": row[0],
             "period_end": row[1],
-            "total_bookings": row[2],
-            "total_revenue": row[3],
-            "avg_booking_cost": row[4],
-            "unique_customers": row[5],
-            "popular_service": row[6],
-            "most_frequent_client_id": row[7],
-            "best_worker": {
-                "worker_id": row[8],
-                "rating": row[9]
+            "metrics":{
+                "total_bookings": row[2],
+                "total_revenue": row[3],
+                "avg_booking_cost": row[4],
             },
-            "worst_worker": {
-                "worker_id": row[10],
-                "rating": row[11]
+            "clients":{
+                "unique_customers": row[5],
+                "most_frequent_client_id": row[7],
+            },        
+            "workers":{
+                "best_worker": {
+                    "worker_id": row[8],
+                    "rating": row[9]
+                },
+                "worst_worker": {
+                    "worker_id": row[10],
+                    "rating": row[11]
+                },
             },
-            "best_service": {
-                "service_id": row[12],
-                "rating": row[13]
+            "services":{
+                "popular_service": row[6],
+                "best_service": {
+                    "service_id": row[12],
+                    "rating": row[13]
+                },
+                "worst_service": {
+                    "service_id": row[14],
+                    "rating": row[15]
+                },
             },
-            "worst_service": {
-                "service_id": row[14],
-                "rating": row[15]
-            }
         }
         return jsonify(response)
     except Exception as e:
