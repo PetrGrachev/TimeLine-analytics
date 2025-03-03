@@ -35,7 +35,7 @@ def get_aggregated_data():
         conn = get_db_connection(ANALYTICS_DB_CONFIG)
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating
+            SELECT period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service_id, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating
             FROM booking_stats
             WHERE org_id = %s
             ORDER BY period_end DESC
@@ -68,7 +68,7 @@ def get_aggregated_data():
                 },
             },
             "services":{
-                "popular_service": row[6],
+                "popular_service_id": row[6],
                 "best_service": {
                     "service_id": row[12],
                     "rating": row[13]
@@ -100,12 +100,22 @@ def get_booking_distribution():
         rows = cursor.fetchall()
         conn.close()
 
-        distribution = []
+        # Группируем данные по дню недели
+        distribution_dict = {}
         for row in rows:
+            day = int(row[0])
+            hour = int(row[1])
+            bookings = row[2]
+            if day not in distribution_dict:
+                distribution_dict[day] = []
+            distribution_dict[day].append({"hour": hour, "bookings": bookings})
+        
+        # Преобразуем словарь в список с нужной структурой
+        distribution = []
+        for day, hours in distribution_dict.items():
             distribution.append({
-                "day_of_week": int(row[0]),
-                "hour": int(row[1]),
-                "total_bookings": row[2]
+                "day_of_week": day,
+                "hours": hours
             })
 
         return jsonify({"distribution": distribution}), 200
@@ -123,10 +133,10 @@ def load_data():
             WITH most_popular_service as (
                 SELECT DISTINCT ON (r.org_id)
                 r.org_id,
-                s.name AS service_name
+                s.service_id AS service_id
                 FROM records r
                 JOIN services s ON r.service_id = s.service_id
-                GROUP BY r.org_id, s.name
+                GROUP BY r.org_id, s.service_id
                 ORDER BY r.org_id, COUNT(*) DESC
             ),
                             
@@ -208,7 +218,7 @@ def load_data():
                    bs.total_revenue,
                    bs.avg_booking_cost,
                    bs.unique_customers,
-                   mps.service_name AS popular_service,
+                   mps.service_id AS popular_service_id,
                    mfc.user_id AS most_frequent_client_id,
                    bw.best_worker_id AS best_worker_id,
                    bw.best_worker_rating AS best_worker_rating,
@@ -232,14 +242,14 @@ def load_data():
         cursor_analytics = conn_analytics.cursor()
         for row in data:
             cursor_analytics.execute("""
-                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating)
+                INSERT INTO booking_stats (org_id, period_start, period_end, total_bookings, total_revenue, avg_booking_cost, unique_customers, popular_service_id, most_frequent_client_id, best_worker_id, best_worker_rating, worst_worker_id, worst_worker_rating, best_service_id, best_service_rating, worst_service_id, worst_service_rating)
                 VALUES (%s, CURRENT_DATE - INTERVAL '1 month', CURRENT_DATE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (org_id, period_end) DO UPDATE 
                 SET total_bookings = EXCLUDED.total_bookings,
                     total_revenue = EXCLUDED.total_revenue,
                     avg_booking_cost = EXCLUDED.avg_booking_cost,
                     unique_customers = EXCLUDED.unique_customers,
-                    popular_service = EXCLUDED.popular_service,
+                    popular_service_id = EXCLUDED.popular_service_id,
                     most_frequent_client_id = EXCLUDED.most_frequent_client_id,
                     best_worker_id = EXCLUDED.best_worker_id,
                     best_worker_rating = EXCLUDED.best_worker_rating,
@@ -271,14 +281,14 @@ def load_booking_distribution():
         cursor_main.execute("""
             SELECT 
                 r.org_id,
-                EXTRACT(DOW FROM s.session_begin) AS day_of_week,
+                EXTRACT(ISODOW FROM s.session_begin) AS day_of_week,
                 EXTRACT(HOUR FROM s.session_begin) AS hour,
                 COUNT(*) AS total_bookings
             FROM records r
             JOIN slots s ON r.slot_id = s.slot_id
             GROUP BY 
                 r.org_id, 
-                EXTRACT(DOW FROM s.session_begin), 
+                EXTRACT(ISODOW FROM s.session_begin), 
                 EXTRACT(HOUR FROM s.session_begin)
             ORDER BY 
                 r.org_id, day_of_week, hour;
