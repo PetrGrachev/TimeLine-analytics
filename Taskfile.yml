@@ -1,0 +1,14 @@
+version: '3'
+
+tasks:
+  up:
+    desc: "Запустить контейнеры с пересборкой"
+    cmds:
+      - docker-compose up --build
+    silent: false
+
+  down:
+    desc: "Остановить и удалить контейнеры вместе с томами"
+    cmds:
+      - docker-compose down -v
+    silent: false
