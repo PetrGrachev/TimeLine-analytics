@@ -53,6 +53,24 @@ services:
       ANALYTICS_DB_PORT: 5432
     ports:
       - "5000:5000"
+  
+  test:
+    build: ./app
+    command: pytest --maxfail=1 --disable-warnings -q /app
+    environment:
+      PYTHONPATH: /app
+      # Параметры для основной БД
+      MAIN_DB_NAME: main_db
+      MAIN_DB_USER: postgres
+      MAIN_DB_PASSWORD: secret
+      MAIN_DB_HOST: postgres_main
+      MAIN_DB_PORT: 5432
+      # Параметры для аналитической БД
+      ANALYTICS_DB_NAME: analytics_db
+      ANALYTICS_DB_USER: postgres
+      ANALYTICS_DB_PASSWORD: secret
+      ANALYTICS_DB_HOST: postgres_analytics
+      ANALYTICS_DB_PORT: 5432
 
 volumes:
   pgdata_main:
