@@ -28,11 +28,11 @@ services:
       - "5433:5432"  # На хосте аналитическая база доступна на порту 5433
     volumes:
       - pgdata_analytics:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./analytics_db:/docker-entrypoint-initdb.d
     command: [ "postgres", "-c", "fsync=off" ]
 
   flask_app:
-    build: .
+    build: ./app
     container_name: flask_app
     restart: always
     depends_on:
