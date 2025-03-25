@@ -33,3 +33,17 @@ CREATE TABLE IF NOT EXISTS booking_distribution (
         period_end
     )
 );
+CREATE TABLE IF NOT EXISTS income_distribution (
+    org_id INT,
+    day_of_week INT,
+    total_bookings INT,
+    total_income INT,
+    period_start DATE,
+    period_end DATE,
+    PRIMARY KEY (
+        org_id,
+        day_of_week,
+        period_start,
+        period_end
+    )
+);

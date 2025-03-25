@@ -1,22 +1,23 @@
 from flask import Flask, request, jsonify
-from db import get_db_connection
-from config import Config
 from summary.summary import get_aggregated_data
 from distribution.distribution import get_booking_distribution
 from load.load import post_load_data
+from get.get_income_distribution import get_income_distribution
 
 app = Flask(__name__)
 
-# Эндпоинт для получения агрегированной информации из аналитической БД по org_id
 @app.route('/analytics/summary', methods=['GET'])
 def aggregated_data():
     return get_aggregated_data()
 
-@app.route('/analytics/distribution', methods=['GET'])
+@app.route('/analytics/distribution/bookings', methods=['GET'])
 def booking_distribution():
     return get_booking_distribution()
 
-# Эндпоинт для загрузки агрегированных данных из главной БД в аналитическую
+@app.route('/analytics/distribution/income', methods=['GET'])
+def income_distribution():
+    return get_income_distribution()
+
 @app.route('/analytics/load', methods=['POST'])
 def load_data():
     return post_load_data()
