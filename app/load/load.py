@@ -4,12 +4,14 @@ from config import Config
 from .summary_load import load_summary
 from .booking_distribution import load_booking_distribution
 from .income_distribution import load_income_distribution
+from .load_cancellations import load_cancellaions
 
 def post_load_data():
     try:
         load_summary()
         load_booking_distribution()
         load_income_distribution()
+        load_cancellaions()
         return jsonify({"status": "Data loaded successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

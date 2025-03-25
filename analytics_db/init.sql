@@ -47,3 +47,16 @@ CREATE TABLE IF NOT EXISTS income_distribution (
         period_end
     )
 );
+CREATE TABLE IF NOT EXISTS cancellations (
+    org_id INT,
+    canceled_records INT,
+    cancellation_percentage INT,
+    most_common_cancel_reason VARCHAR(300),
+    period_start DATE,
+    period_end DATE,
+    PRIMARY KEY (
+        org_id,
+        period_start,
+        period_end
+    )
+);

@@ -3,6 +3,7 @@ from get.get_summary import get_summary
 from get.get_booking_distribution import get_booking_distribution
 from load.load import post_load_data
 from get.get_income_distribution import get_income_distribution
+from get.get_cancellations import get_cancellations
 
 app = Flask(__name__)
 
@@ -17,6 +18,10 @@ def booking_distribution():
 @app.route('/analytics/distribution/income', methods=['GET'])
 def income_distribution():
     return get_income_distribution()
+
+@app.route('/analytics/cancellations', methods=['GET'])
+def cancellations():
+    return get_cancellations()
 
 @app.route('/analytics/load', methods=['POST'])
 def load_data():
