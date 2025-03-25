@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from db import get_db_connection
 from config import Config
 
-def get_aggregated_data():
+def get_summary():
     org_id = request.args.get("org_id")
     if not org_id:
         return jsonify({"error": "org_id is required"}), 400

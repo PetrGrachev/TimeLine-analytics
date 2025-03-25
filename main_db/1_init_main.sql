@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS users (
     verified BOOLEAN DEFAULT FALSE,
     is_delete BOOLEAN DEFAULT FALSE
 );
-
 CREATE TABLE IF NOT EXISTS users_verify (
     user_verify_id SERIAL PRIMARY KEY,
     user_id INT,
@@ -20,7 +19,6 @@ CREATE TABLE IF NOT EXISTS users_verify (
     expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
-
 CREATE TABLE IF NOT EXISTS orgs (
     org_id SERIAL PRIMARY KEY,
     uuid VARCHAR(50),
@@ -39,15 +37,13 @@ CREATE TABLE IF NOT EXISTS orgs (
     verified BOOLEAN DEFAULT FALSE,
     is_delete BOOLEAN DEFAULT FALSE
 );
-
 CREATE TABLE IF NOT EXISTS showcase (
     url VARCHAR(100) PRIMARY KEY,
     type VARCHAR(100),
     org_id INT NOT NULL,
-    FOREIGN KEY (org_id) REFERENCES orgs(org_id) ON DELETE CASCADE  
+    FOREIGN KEY (org_id) REFERENCES orgs(org_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_showcase_org_id ON showcase (org_id);
-
 CREATE TABLE IF NOT EXISTS timetables (
     timetable_id SERIAL PRIMARY KEY,
     org_id INT NOT NULL,
@@ -58,7 +54,6 @@ CREATE TABLE IF NOT EXISTS timetables (
     break_end TIMESTAMP NOT NULL,
     FOREIGN KEY (org_id) REFERENCES orgs(org_id) ON DELETE CASCADE
 );
-
 CREATE TABLE IF NOT EXISTS orgs_verify (
     org_verify_id SERIAL PRIMARY KEY,
     org_id INT NOT NULL,
@@ -66,22 +61,20 @@ CREATE TABLE IF NOT EXISTS orgs_verify (
     expires_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (org_id) REFERENCES orgs(org_id) ON DELETE CASCADE
 );
-
 CREATE TABLE IF NOT EXISTS services (
     service_id SERIAL PRIMARY KEY,
     org_id INT,
     name VARCHAR(300) NOT NULL,
-    cost NUMERIC(15,2) NOT NULL,
+    cost NUMERIC(15, 2) NOT NULL,
     description VARCHAR(400),
     FOREIGN KEY (org_id) REFERENCES orgs(org_id) ON DELETE CASCADE,
     is_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS workers (
     worker_id SERIAL PRIMARY KEY,
     uuid VARCHAR(50),
-    org_id INT, 
+    org_id INT,
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255),
     position VARCHAR(300),
@@ -91,7 +84,6 @@ CREATE TABLE IF NOT EXISTS workers (
     is_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS worker_services (
     worker_id INT,
     service_id INT,
@@ -101,7 +93,6 @@ CREATE TABLE IF NOT EXISTS worker_services (
     is_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS worker_schedules (
     worker_schedule_id SERIAL PRIMARY KEY,
     org_id INT,
@@ -114,7 +105,6 @@ CREATE TABLE IF NOT EXISTS worker_schedules (
     is_delete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS slots (
     slot_id SERIAL PRIMARY KEY,
     worker_schedule_id INT,
@@ -127,7 +117,6 @@ CREATE TABLE IF NOT EXISTS slots (
     FOREIGN KEY (worker_id) REFERENCES workers(worker_id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS records (
     record_id SERIAL PRIMARY KEY,
     reviewed BOOLEAN DEFAULT FALSE,
@@ -142,9 +131,10 @@ CREATE TABLE IF NOT EXISTS records (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (org_id) REFERENCES orgs(org_id),
     UNIQUE (slot_id),
+    is_canceled BOOL DEFAULT FALSE,
+    cancel_reason VARCHAR(300) DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS feedbacks (
     feedback_id SERIAL,
     record_id INT,

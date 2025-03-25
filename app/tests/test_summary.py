@@ -1,6 +1,6 @@
 import pytest
 from flask import Flask
-from summary.summary import get_aggregated_data
+from get.get_summary import get_summary
 
 # Определяем фиктивные классы для имитации подключения к БД
 class DummyCursor:
@@ -30,7 +30,7 @@ def app():
     app = Flask(__name__)
     app.testing = True
     # Регистрируем тестовый маршрут, привязанный к функции get_aggregated_data
-    app.add_url_rule('/analytics/summary', view_func=get_aggregated_data, methods=['GET'])
+    app.add_url_rule('/analytics/summary', view_func=get_summary, methods=['GET'])
     return app
 
 @pytest.fixture

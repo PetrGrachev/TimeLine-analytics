@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
-from summary.summary import get_aggregated_data
-from distribution.distribution import get_booking_distribution
+from get.get_summary import get_summary
+from get.get_booking_distribution import get_booking_distribution
 from load.load import post_load_data
 from get.get_income_distribution import get_income_distribution
 
@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 @app.route('/analytics/summary', methods=['GET'])
 def aggregated_data():
-    return get_aggregated_data()
+    return get_summary()
 
 @app.route('/analytics/distribution/bookings', methods=['GET'])
 def booking_distribution():
