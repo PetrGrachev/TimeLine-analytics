@@ -60,3 +60,18 @@ CREATE TABLE IF NOT EXISTS cancellations (
         period_end
     )
 );
+CREATE TABLE IF NOT EXISTS workers_workload (
+    org_id INT,
+    worker_id INT,
+    busy_slots INT,
+    total_slots INT,
+    workload_percentage NUMERIC(15, 2),
+    period_start DATE,
+    period_end DATE,
+    PRIMARY KEY (
+        org_id,
+        worker_id,
+        period_start,
+        period_end
+    )
+);

@@ -100,8 +100,8 @@ INSERT INTO worker_schedules (org_id, worker_id, weekday, start, over)
 SELECT w.org_id,
     w.worker_id,
     weekday,
-    '2024-11-28 08:00:00',
-    '2024-11-28 18:00:00'
+    CURRENT_DATE + TIME '08:00',
+    CURRENT_DATE + TIME '18:00'
 FROM workers w,
     generate_series(1, 7) AS weekday;
 -- Создаем слоты на текущую неделю

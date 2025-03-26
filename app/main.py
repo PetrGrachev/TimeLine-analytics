@@ -4,7 +4,7 @@ from get.get_booking_distribution import get_booking_distribution
 from load.load import post_load_data
 from get.get_income_distribution import get_income_distribution
 from get.get_cancellations import get_cancellations
-
+from get.get_workers_workload import get_workers_workload
 app = Flask(__name__)
 
 @app.route('/analytics/summary', methods=['GET'])
@@ -22,6 +22,10 @@ def income_distribution():
 @app.route('/analytics/cancellations', methods=['GET'])
 def cancellations():
     return get_cancellations()
+
+@app.route('/analytics/workload', methods=['GET'])
+def workers_workload():
+    return get_workers_workload()
 
 @app.route('/analytics/load', methods=['POST'])
 def load_data():
