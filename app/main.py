@@ -5,6 +5,7 @@ from load.load import post_load_data
 from get.get_income_distribution import get_income_distribution
 from get.get_cancellations import get_cancellations
 from get.get_workers_workload import get_workers_workload
+from get.get_feedback_analysis import get_feedback_analysis
 app = Flask(__name__)
 
 @app.route('/analytics/summary', methods=['GET'])
@@ -26,6 +27,10 @@ def cancellations():
 @app.route('/analytics/workload', methods=['GET'])
 def workers_workload():
     return get_workers_workload()
+
+@app.route('/analytics/ai/feedbacks', methods=['GET'])
+def feedback_analysis():
+    return get_feedback_analysis()
 
 @app.route('/analytics/load', methods=['POST'])
 def load_data():
