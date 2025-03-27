@@ -4,7 +4,7 @@ tasks:
   up:
     desc: "Запустить контейнеры с пересборкой"
     cmds:
-      - docker-compose up --build
+      - docker-compose up --build flask_app postgres_main postgres_analytics
     silent: false
 
   down:

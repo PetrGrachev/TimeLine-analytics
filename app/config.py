@@ -1,5 +1,5 @@
 import os
-
+# docker push petrgrachev/timeline-analytics:latest
 class Config:
     ANALYTICS_DB_CONFIG = {
         "dbname": os.getenv("DB_NAME", "analytics_db"),

@@ -3,7 +3,8 @@ psycopg2-binary
 joblib
 apscheduler
 pytest
-spacy
-pytextrank
+keybert
+sentence-transformers
 transformers
-torch
+scikit-learn
+nltk

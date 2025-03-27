@@ -75,3 +75,11 @@ CREATE TABLE IF NOT EXISTS workers_workload (
         period_end
     )
 );
+CREATE TABLE IF NOT EXISTS feedback_analysis (
+    org_id INT,
+    period_start DATE,
+    period_end DATE,
+    positive_keywords JSONB,
+    negative_keywords JSONB,
+    PRIMARY KEY(org_id, period_start, period_end)
+);
