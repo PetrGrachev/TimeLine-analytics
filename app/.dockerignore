@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.zip
+*.tar
+*.ipynb
+venv/
+*.db
+.DS_Store

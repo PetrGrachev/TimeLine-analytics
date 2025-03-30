@@ -1,0 +1,9 @@
+Flask
+psycopg2-binary
+joblib
+apscheduler
+pytest
+keybert
+sentence-transformers
+transformers
+scikit-learn

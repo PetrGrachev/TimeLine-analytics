@@ -1,14 +1,22 @@
-FROM python:3.9
+FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Установим зависимости системы
+RUN apt-get update && apt-get install -y gcc g++ libpq-dev && rm -rf /var/lib/apt/lists/*
 
-# Загрузка ресурсов
-RUN python -m nltk.downloader stopwords
-RUN python -m spacy download ru_core_news_sm
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')"
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+COPY ../requirements-base.txt .
+RUN pip install --no-cache-dir -r requirements-base.txt
+
+COPY ../requirements-dev.txt .
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+# Копируем локальные модели и ресурсы
+COPY models/feedbacks_analysis /app/models/feedbacks_analysis
+
+# Копируем сам код
 COPY . .
 
 CMD ["python", "main.py"]

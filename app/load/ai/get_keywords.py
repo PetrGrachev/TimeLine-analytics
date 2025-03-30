@@ -1,18 +1,13 @@
 import spacy
 from keybert import KeyBERT
-from nltk.corpus import stopwords
-import nltk
 
-# Загрузка стоп-слов один раз
-try:
-    russian_stopwords = stopwords.words("russian")
-except LookupError:
-    nltk.download("stopwords")
-    russian_stopwords = stopwords.words("russian")
 
-# Инициализация spaCy и KeyBERT
-nlp = spacy.load("ru_core_news_sm")
-kw_model = KeyBERT("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+with open("models/feedbacks_analysis/russian", encoding="utf-8") as f:
+    russian_stopwords = [line.strip() for line in f if line.strip()]
+
+nlp = spacy.load("models/feedbacks_analysis/ru_core_news_sm")
+
+kw_model = KeyBERT("models/feedbacks_analysis/miniLM")
 
 def lemmatize_text(text: str) -> str:
     """Нормализуем текст: лемматизация, удаление стоп-слов, пунктуации"""
