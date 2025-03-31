@@ -7,3 +7,6 @@ keybert
 sentence-transformers
 transformers
 scikit-learn
+spacy
+pymorphy3
+flasgger
