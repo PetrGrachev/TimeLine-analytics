@@ -24,9 +24,9 @@ def get_summary():
             "period_start": row[0],
             "period_end": row[1],
             "metrics":{
-                "total_bookings": row[2],
-                "total_revenue": row[3],
-                "avg_booking_cost": row[4],
+                "total_bookings": int(row[2]),
+                "total_revenue": int(row[3]),
+                "avg_booking_cost": int(row[4]),
             },
             "clients":{
                 "unique_customers": row[5],
@@ -35,22 +35,22 @@ def get_summary():
             "workers":{
                 "best_worker": {
                     "worker_id": row[8],
-                    "rating": row[9]
+                    "rating": int(row[9])
                 },
                 "worst_worker": {
                     "worker_id": row[10],
-                    "rating": row[11]
+                    "rating": int(row[11])
                 },
             },
             "services":{
                 "popular_service_id": row[6],
                 "best_service": {
                     "service_id": row[12],
-                    "rating": row[13]
+                    "rating": int(row[13])
                 },
                 "worst_service": {
                     "service_id": row[14],
-                    "rating": row[15]
+                    "rating": int(row[15])
                 },
             },
         }

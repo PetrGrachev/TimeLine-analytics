@@ -2,11 +2,11 @@ import os
 # docker push petrgrachev/timeline-analytics:latest
 class Config:
     ANALYTICS_DB_CONFIG = {
-        "dbname": os.getenv("DB_NAME", "analytics_db"),
-        "user": os.getenv("DB_USER", "postgres"),
-        "password": os.getenv("DB_PASSWORD", "secret"),
-        "host": os.getenv("DB_HOST", "postgres_analytics"),
-        "port": os.getenv("DB_PORT", "5432")
+        "dbname": os.getenv("ANALYTICS_DB_NAME", "analytics_db"),
+        "user": os.getenv("ANALYTICS_DB_USER", "postgres"),
+        "password": os.getenv("ANALYTICS_DB_PASSWORD", "secret"),
+        "host": os.getenv("ANALYTICS_DB_HOST", "postgres_analytics"),
+        "port": os.getenv("ANALYTICS_DB_PORT", "5432")
     }
 
     MAIN_DB_CONFIG = {

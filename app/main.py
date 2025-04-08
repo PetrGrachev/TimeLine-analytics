@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flasgger import Swagger
-
+import os
 from get.get_summary import get_summary
 from get.get_booking_distribution import get_booking_distribution
 from load.load import post_load_data
@@ -390,5 +390,26 @@ def load_data():
     """
     return post_load_data()
 
+@app.route('/analytics/health', methods=['GET'])
+def health_check():
+    """
+    Проверка состояния сервиса
+
+    ---
+    tags:
+      - Health
+    summary: Проверка состояния микросервиса
+    description: Проверка работоспособности контейнера (Docker healthcheck).
+    responses:
+      200:
+        description: Сервис работает корректно
+        content:
+          application/json:
+            example:
+              status: ok
+    """
+    return jsonify({"status": "ok"}), 200
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.getenv("FLASK_PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
