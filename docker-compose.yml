@@ -56,7 +56,7 @@ services:
   
   test:
     build: ./app
-    command: pytest --maxfail=1 --disable-warnings -q /app
+    command: pytest --disable-warnings --tb=short -rA -v /app
     environment:
       PYTHONPATH: /app
       # Параметры для основной БД

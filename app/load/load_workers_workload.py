@@ -22,17 +22,24 @@ available_slots AS (
     FROM worker_schedules ws
     JOIN workers w ON w.worker_id = ws.worker_id
     GROUP BY ws.worker_id
+),
+workload AS (
+    SELECT
+        w.org_id,
+        w.worker_id,
+        COALESCE(bs.busy_count, 0) AS busy_slots,
+        av.total_slots::INT AS total_slots,
+        ROUND(100.0 * COALESCE(bs.busy_count, 0) / NULLIF(av.total_slots, 0), 2) AS workload_percentage,
+        ROW_NUMBER() OVER (PARTITION BY w.org_id ORDER BY ROUND(100.0 * COALESCE(bs.busy_count, 0) / NULLIF(av.total_slots, 0), 2) DESC) AS rn
+    FROM workers w
+    LEFT JOIN busy_slots bs ON w.worker_id = bs.worker_id
+    LEFT JOIN available_slots av ON w.worker_id = av.worker_id
 )
 SELECT
-    w.org_id,
-    w.worker_id,
-    COALESCE(bs.busy_count, 0) AS busy_slots,
-    av.total_slots::INT AS total_slots,
-    ROUND(100.0 * COALESCE(bs.busy_count, 0) / NULLIF(av.total_slots, 0), 2) AS workload_percentage
-FROM workers w
-LEFT JOIN busy_slots bs ON w.worker_id = bs.worker_id
-LEFT JOIN available_slots av ON w.worker_id = av.worker_id
-ORDER BY w.org_id, workload_percentage DESC;
+    org_id, worker_id, busy_slots, total_slots, workload_percentage
+FROM workload
+WHERE rn <= 3
+ORDER BY org_id, workload_percentage DESC;
         """)
     distribution_data = cursor_main.fetchall()
     conn_main.close()

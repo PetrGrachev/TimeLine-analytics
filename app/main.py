@@ -8,9 +8,27 @@ from get.get_income_distribution import get_income_distribution
 from get.get_cancellations import get_cancellations
 from get.get_workers_workload import get_workers_workload
 from get.get_feedback_analysis import get_feedback_analysis
+from metrics import before_request, after_request, metrics
+import threading
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 swagger = Swagger(app)
+
+app.before_request(before_request)
+app.after_request(after_request)
+
+@app.route('/analytics/metrics')
+def metrics_route():
+    """
+    Метрики сервиса
+
+    ---
+    tags:
+      - Metrics
+    summary: Сбор метрик микросервиса
+    """
+    return metrics()
 
 @app.route('/analytics/summary', methods=['GET'])
 def aggregated_data():
@@ -360,36 +378,6 @@ def feedback_analysis():
     """
     return get_feedback_analysis()
 
-@app.route('/analytics/load', methods=['POST'])
-def load_data():
-    """
-    Запустить обновление аналитических данных
-
-    ---
-    tags:
-      - Internal
-    summary: Загрузка агрегированной статистики и ИИ-аналитики
-    description: Выполняет пересчёт и загрузку всех аналитических данных в базу.
-    responses:
-      200:
-        description: Данные успешно загружены
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: Data loaded successfully
-      500:
-        description: Внутренняя ошибка сервера при выполнении загрузки
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Internal server error
-    """
-    return post_load_data()
-
 @app.route('/analytics/health', methods=['GET'])
 def health_check():
     """
@@ -411,5 +399,11 @@ def health_check():
     return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
-    port = int(os.getenv("FLASK_PORT", 5000))
+    
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(post_load_data, 'interval', days=7)
+    scheduler.start()
+
+    port = int(os.getenv("APP_PORT", 5000))
+    threading.Thread(target=post_load_data).start()
     app.run(host='0.0.0.0', port=port)

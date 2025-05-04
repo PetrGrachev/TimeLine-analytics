@@ -16,6 +16,6 @@ tasks:
   test:
     desc: "Запустить тесты с помощью pytest"
     cmds:
-      - docker-compose build --no-cache test
+      - docker-compose build test
       - docker-compose run test
     silent: false

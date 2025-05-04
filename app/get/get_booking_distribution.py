@@ -13,8 +13,15 @@ def get_booking_distribution():
             SELECT day_of_week, hour, total_bookings
             FROM booking_distribution
             WHERE org_id = %s
+                       AND (period_start, period_end) = (
+                            SELECT period_start, period_end
+                            FROM booking_distribution
+                            WHERE org_id = %s
+                            ORDER BY period_end DESC
+                            LIMIT 1
+                        )
             ORDER BY day_of_week, hour;
-        """, (org_id,))
+        """, (org_id, org_id))
         rows = cursor.fetchall()
         conn.close()
 

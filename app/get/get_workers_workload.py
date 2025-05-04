@@ -13,8 +13,16 @@ def get_workers_workload():
             SELECT period_start, period_end, worker_id, busy_slots, total_slots, workload_percentage
             FROM workers_workload
             WHERE org_id = %s
+                       AND (period_start, period_end) = (
+                            SELECT period_start, period_end
+                            FROM workers_workload
+                            WHERE org_id = %s
+                            ORDER BY period_end DESC
+                            LIMIT 1
+                        )
             ORDER BY period_end DESC
-        """, (org_id,))
+            LIMIT 3;          
+        """, (org_id, org_id))
         rows = cursor.fetchall()
         conn.close()
 
